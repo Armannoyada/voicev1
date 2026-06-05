@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  callsMade     Call[] @relation("Caller")
+  callsReceived Call[] @relation("Callee")
+  hostedRooms   Room[] @relation("RoomHost")
+}
+
+enum CallStatus {
+  RINGING
+  ACCEPTED
+  DECLINED
+  MISSED
+  ENDED
+  CANCELED
+}
+
+enum RoomStatus {
+  ACTIVE
+  ENDED
+}
+
+model Call {
+  id        String     @id @default(cuid())
+  roomName  String     @unique
+  status    CallStatus @default(RINGING)
+  callerId  String
+  calleeId  String
+  caller    User       @relation("Caller", fields: [callerId], references: [id], onDelete: Cascade)
+  callee    User       @relation("Callee", fields: [calleeId], references: [id], onDelete: Cascade)
+
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([callerId])
+  @@index([calleeId])
+}
+
+model Room {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  title     String
+  roomName  String     @unique
+  hostId    String
+  host      User       @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  status    RoomStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  endedAt   DateTime?
+
+  @@index([hostId])
+}
